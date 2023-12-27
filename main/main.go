@@ -7,75 +7,97 @@ import (
 	"log"
 )
 
-const (
-	host     = "localhost"
-	dbType   = "mysql"
-	user     = "golang"
-	password = "go-pass"
-)
+type DBConfig struct {
+	host     string
+	dbType   string
+	user     string
+	password string
+	DB       *sql.DB
+	err      error
+}
 
-func connectDB() *sql.DB {
+func (dbConfig *DBConfig) connectDB() {
 	// Initialize connection string
-	connectionStr := fmt.Sprintf("%s:%s@tcp(%s:3306)/?allowNativePasswords=true", user, password, host)
+	connectionStr := fmt.Sprintf("%s:%s@tcp(%s:3306)/?allowNativePasswords=true", dbConfig.user, dbConfig.password, dbConfig.host)
 	// Initialize connection object
-	db, err := sql.Open(dbType, connectionStr)
+	dbConfig.DB, dbConfig.err = sql.Open(dbConfig.dbType, connectionStr)
+	if dbConfig.err != nil {
+		panic(dbConfig.err)
+	}
+	fmt.Println("Successfully connected to database")
+}
+
+func (dbConfig *DBConfig) showDBs() {
+	strSql := "SHOW DATABASES;"
+	i := 1
+	fmt.Printf("SQL: %s\n\n", strSql)
+	res, err := dbConfig.DB.Query(strSql)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Successfully connected to database")
-	return db
+	for db := ""; res.Next(); {
+		res.Scan(&db)
+		fmt.Printf("%d: %s\n", i, db)
+		i++
+	}
 }
 
-func createDB(db *sql.DB, dbName string) {
+func (dbConfig *DBConfig) createDB(dbName string) {
 	strSql := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s;", dbName)
-	_, err := db.Exec(strSql)
+	_, err := dbConfig.DB.Exec(strSql)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Successful database creation")
 }
 
-func dropDB(db *sql.DB, dbName string) {
+func (dbConfig *DBConfig) dropDB(dbName string) {
 	strSql := fmt.Sprintf("DROP DATABASE %s;", dbName)
-	_, err := db.Exec(strSql)
+	_, err := dbConfig.DB.Exec(strSql)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Successful database deletion")
 }
 
-func selectUseDB(db *sql.DB, dbName string) {
+func (dbConfig *DBConfig) selectUseDB(dbName string) {
 	strSql := fmt.Sprintf("USE %s;", dbName)
-	_, err := db.Exec(strSql)
+	_, err := dbConfig.DB.Exec(strSql)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Successful database selection")
 }
 
-func createTable(db *sql.DB, tableName string) {
+func (dbConfig *DBConfig) createTable(tableName string) {
 	strSql := fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s ( id integer );", tableName)
-	_, err := db.Exec(strSql)
+	_, err := dbConfig.DB.Exec(strSql)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Successful table selection")
+	fmt.Println("Successful table creation")
 }
 
-func dropTable(db *sql.DB, tableName string) {
+func (dbConfig *DBConfig) showTables() {
+	i := 1
+	strSql := "SHOW TABLES;"
+	fmt.Printf("SQL: %s\n\n", strSql)
+	res, err := dbConfig.DB.Query(strSql)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for table := ""; res.Next(); {
+		res.Scan(&table)
+		fmt.Printf("%d: %s\n", i, table)
+		i++
+	}
+}
+
+func (dbConfig *DBConfig) dropTable(tableName string) {
 	strSql := fmt.Sprintf("DROP TABLE %s;", tableName)
-	_, err := db.Exec(strSql)
+	_, err := dbConfig.DB.Exec(strSql)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Successful table deletion")
-}
-
-func main() {
-	db := connectDB()
-	createDB(db, "testdayo")
-	selectUseDB(db, "testdayo")
-	createTable(db, "tests")
-	dropTable(db, "tests")
-	dropDB(db, "testdayo")
 }
